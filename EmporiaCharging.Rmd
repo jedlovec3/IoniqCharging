@@ -12,14 +12,18 @@ library(readxl)
 
 ```
 
+Load daily data
 
 ```{r}
 
 daily_2023 <- read_csv("FA1BE4-Emporia_Garage-1DAY_2023.csv")
+daily_2024 <- read_csv("FA1BE4-Emporia_Garage-1DAY_20240101_20240613.csv")
+
+daily <- rbind(daily_2023,daily_2024)
 
 #change data types
-daily_2023 <- daily_2023 %>% 
-  rename(datetime = `Time Bucket (America/New_York)`, kWhs = `Emporia Garage-EV (kWhs)`) %>% 
+daily <- daily %>% 
+  rename(datetime = `Time Bucket (America/New_York)`, kWh = `Emporia Garage-EV (kWhs)`) %>% 
   #mutate(datetime = as_datetime(datetime, tz = 'America/New_York'))
   #mutate(datetime = as.POSIXct(datetime,format="%m/%d/%Y %H:%M:%S",tz='America/New_York'))
   mutate(datetime = mdy_hms(datetime, tz = 'America/New_York')) %>% 
@@ -33,8 +37,76 @@ daily_2023 <- daily_2023 %>%
          ))
 
 
-daily_2023 %>% 
+daily %>% 
   group_by(solar_year) %>% 
-  summarize(kWh = sum(kWhs))
+  summarize(kWh = round(sum(kWh)))
+```
+```{r}
+hourly_2023 <- read_csv("FA1BE4-Emporia_Garage-1H_2023.csv")
+hourly_2024 <- read_csv("FA1BE4-Emporia_Garage-1H_20240101_20240613.csv")
+
+hourly <- rbind(hourly_2023,hourly_2024)
+
+#change data types
+hourly <- hourly %>% 
+  rename(datetime = `Time Bucket (America/New_York)`, kWh = `Emporia Garage-EV (kWhs)`) %>% 
+  #mutate(datetime = as_datetime(datetime, tz = 'America/New_York'))
+  #mutate(datetime = as.POSIXct(datetime,format="%m/%d/%Y %H:%M:%S",tz='America/New_York'))
+  mutate(datetime = mdy_hms(datetime, tz = 'America/New_York')) %>% 
+  mutate(solar_year = factor(case_when(
+                        datetime < as.POSIXct('04/16/2022 00:00',format="%m/%d/%Y %H:%M",tz=Sys.timezone()) ~ 0,
+                        datetime >= as.POSIXct('04/16/2022 00:00',format="%m/%d/%Y %H:%M",tz=Sys.timezone())  &
+                          datetime < as.POSIXct('04/16/2023 00:00',format="%m/%d/%Y %H:%M",tz=Sys.timezone()) ~ 1,
+                        datetime >= as.POSIXct('04/16/2023 00:00',format="%m/%d/%Y %H:%M",tz=Sys.timezone())  &
+                          datetime < as.POSIXct('04/16/2024 00:00',format="%m/%d/%Y %H:%M",tz=Sys.timezone()) ~ 2,
+                        TRUE ~ 3)
+         ))
+
+hourly %>% 
+  arrange(desc(kWh))
+```
+Peak of about 9.9 kWh/h (kW)
+
+
+```{r}
+sample <- hourly %>% 
+  filter(date(datetime) == '2024-06-09' | date(datetime) == '2024-06-10')
+
+ggplot(sample, aes(datetime, kWh)) +
+  geom_point()
+```
+
+```{r}
+
+min15_2023 <- read_csv("FA1BE4-Emporia_Garage-15MIN_20230609_20231231.csv", show_col_types = FALSE)
+min15_2024 <- read_csv("FA1BE4-Emporia_Garage-15MIN_20240101_20240613.csv", show_col_types = FALSE)
+
+min15 <- rbind(min15_2023,min15_2024)
+
+#change data types
+min15 <- min15 %>% 
+  rename(datetime = `Time Bucket (America/New_York)`, kW = `Emporia Garage-EV (kWatts)`) %>% 
+  #mutate(datetime = as_datetime(datetime, tz = 'America/New_York'))
+  #mutate(datetime = as.POSIXct(datetime,format="%m/%d/%Y %H:%M:%S",tz='America/New_York'))
+  mutate(datetime = mdy_hms(datetime, tz = 'America/New_York')) %>% 
+  mutate(solar_year = factor(case_when(
+                        datetime < as.POSIXct('04/16/2022 00:00',format="%m/%d/%Y %H:%M",tz=Sys.timezone()) ~ 0,
+                        datetime >= as.POSIXct('04/16/2022 00:00',format="%m/%d/%Y %H:%M",tz=Sys.timezone())  &
+                          datetime < as.POSIXct('04/16/2023 00:00',format="%m/%d/%Y %H:%M",tz=Sys.timezone()) ~ 1,
+                        datetime >= as.POSIXct('04/16/2023 00:00',format="%m/%d/%Y %H:%M",tz=Sys.timezone())  &
+                          datetime < as.POSIXct('04/16/2024 00:00',format="%m/%d/%Y %H:%M",tz=Sys.timezone()) ~ 2,
+                        TRUE ~ 3)
+         ))
+
+```
+
+
+
+```{r}
+sample <- min15 %>% 
+  filter(date(datetime) == '2024-06-09' | date(datetime) == '2024-06-10')
+
+ggplot(sample, aes(datetime, kW)) +
+  geom_point()
 ```
 
